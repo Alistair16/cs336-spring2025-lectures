@@ -126,7 +126,7 @@ class MLP(nn.Module):
 
 def run_mlp(dim: int, num_layers: int, batch_size: int, num_steps: int) -> Callable:
     # Define a model (with random weights)
-    model = MLP(dim, num_layers).to(get_device())
+    model = MLP(dim, num_layers).to(get_device()) # Creates the model on CPU and ships it to CUDA if availabalbe
 
     # Define an input (random)
     x = torch.randn(batch_size, dim, device=get_device())
@@ -135,10 +135,11 @@ def run_mlp(dim: int, num_layers: int, batch_size: int, num_steps: int) -> Calla
         # Run the model `num_steps` times (note: no optimizer updates)
         for step in range(num_steps):
             # Forward
-            y = model(x).mean()
+            y = model(x).mean() # computes the average of all the tensors of the output y from the model run on input x
 
             # Backward
-            y.backward()
+            y.backward() # computes dy/dtheta where theta is a parameter of the model
+            # how does every parameter in the model effect this single scalar value
 
     return run
 
@@ -152,7 +153,7 @@ def run_operation1(dim: int, operation: Callable) -> Callable:
 
 def run_operation2(dim: int, operation: Callable) -> Callable:
     # Setup: create two random dim x dim matrices
-    x = torch.randn(dim, dim, device=get_device())
+    x = torch.randn(dim, dim, device=get_device()) # creates a random matrix of dimension (dim, dim)
     y = torch.randn(dim, dim, device=get_device())
     # Return a function to perform the operation
     return lambda : operation(x, y)
@@ -168,7 +169,7 @@ def benchmarking():
     text("- understanding how performance scales (e.g., with dimension).")
 
     text("Let's define a convenient function for benchmarking an arbitrary function.")
-    benchmark("sleep", lambda : time.sleep(50 / 1000))
+    benchmark("sleep", lambda : time.sleep(50 / 1000)) # time.sleep(x) pauses execution for x sections
 
     text("### Benchmarking matrix multiplication")
     text("First, let us benchmark matrix multiplication of square matrices.")
@@ -180,7 +181,8 @@ def benchmarking():
     matmul_results = [] 
     for dim in dims:
         # @ inspect dim
-        result = benchmark(f"matmul(dim={dim})", run_operation2(dim=dim, operation=lambda a, b: a @ b))
+        result = benchmark(f"matmul(dim={dim})", run_operation2(dim=dim, operation=lambda a, b: a @ b)) # f"matmul(dim={dim})" string label # lambda a, b: a @ b, takes two inputs a and b and performs matrix multiplication
+        # run_operation2 defined earlier 
         matmul_results.append((dim, result))  # @inspect matmul_results
 
     text("Let us benchmark our MLP!")
@@ -192,7 +194,7 @@ def benchmarking():
     mlp_base = benchmark("run_mlp", run_mlp(dim=dim, num_layers=num_layers, batch_size=batch_size, num_steps=num_steps)) # @inspect mlp_base
 
 
-    text("Scale the number of steps.")
+    text("Scale the number of steps.") # increase the number of steps 
     step_results = []
     for scale in (2, 3, 4, 5):
         result = benchmark(f"run_mlp({scale}x num_steps)", 
@@ -200,13 +202,14 @@ def benchmarking():
                                 batch_size=batch_size, num_steps=scale * num_steps)) # @inspect result, @inspect scale, @inspect num_steps
         step_results.append((scale, result))  # @inspect step_results
 
-    text("Scale the number of layers.")
+    text("Scale the number of layers.") # Has a linear steps
     layer_results = []
     for scale in (2, 3, 4, 5):
         result = benchmark(f"run_mlp({scale}x num_layers)", 
                          run_mlp(dim=dim, num_layers=scale * num_layers, 
                                 batch_size=batch_size, num_steps=num_steps)) # @inspect result, @inspect scale, @inspect num_layers, @inspect num_steps
         layer_results.append((scale, result))  # @inspect layer_results
+        
 
     text("Scale the batch size.")
     batch_results = []
@@ -241,7 +244,7 @@ def benchmark(description: str, run: Callable, num_warmups: int = 1, num_trials:
         torch.cuda.synchronize()  # Wait for CUDA threads to finish (important!)
 
     # Time it for real now!
-    times: list[float] = [] # @inspect times, @inspect description
+    times: list[float] = [] # @inspect times, @inspect description # times is expected to be a list of floating point numbers
     for trial in range(num_trials):  # Do it multiple times to capture variance
         start_time = time.time()
 
@@ -252,7 +255,7 @@ def benchmark(description: str, run: Callable, num_warmups: int = 1, num_trials:
         end_time = time.time()
         times.append((end_time - start_time) * 1000) # @inspect times
 
-    mean_time = mean(times) # @inspect mean_time
+    mean_time = mean(times) # @inspect mean_time # gives the mean time of execution
     return mean_time
 
 
@@ -264,7 +267,7 @@ def profiling():
     text("PyTorch has a nice built-in profiler "), link("https://pytorch.org/tutorials/recipes/recipes/profiler_recipe.html")
 
     text("Let's profile some code to see what is going on under the hood.")
-    sleep_function = lambda : time.sleep(50 / 1000)
+    sleep_function = lambda : time.sleep(50 / 1000) # every time this function runs, pause the execution by 0.05 second
     sleep_profile = profile("sleep", sleep_function) 
     text(f"## sleep")
     text(sleep_profile, verbatim=True)
